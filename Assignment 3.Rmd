@@ -1,0 +1,165 @@
+---
+title: "Homework 3"
+author: "Septer"
+date: "2024-09-12"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(table1)
+library(haven)
+library(magrittr)
+library(GGally)
+library(ggfortify)
+library(dplyr)
+library(ggplot2)
+library(MASS)
+library(grid)
+library(png)
+library(gmodels)
+
+```
+
+```{r}  
+# Loading data 
+read.csv("C:/Users/benny/OneDrive/Documents/GitDemo/HW3/Class 1 Survey Fall 2024_di.csv")
+
+#name data to Class1
+Class1 <- read.csv("C:/Users/benny/OneDrive/Documents/GitDemo/HW3/Class 1 Survey Fall 2024_di.csv")
+```
+
+Determine: a. the number of observations (i.e. the number of people who filled out the survey) and b. the number of variables in the dataframe.
+```{r}
+observations <- nrow(Class1)
+variables <- ncol(Class1)
+
+cat("Number of observations:", observations, "\n")
+cat("Number of variables:", variables, "\n")
+
+```
+
+3. a. Rename the column variables to something shorter and that is descriptive of what the variable is about (for example like_dogs for the ‘Do you like dogs?’ question variable) and b. Display that they are renamed. 
+```{r}
+#renaming the Variables
+names(Class1)[1:27]<-c("id", "like_cats", "like_dogs", "have_desert", "slogan", "fav_day", "larkORowl", "fav_food", "fav_drink", "fav_season", "fav_month", "hobby", "program", "specialization", "stat_software", "R_exp", "coding_comfort", "coding_length", "top_three","public_health_interest", "fav_num", "bday", "bmonth", "country", "state", "city", "highest_educ_level")
+
+# displaying the renamed variable
+colnames(Class1)
+```
+
+4. Write code to determine and display the number of factor, integer, numerical, and character variables there are in the C1survey dataset.
+```{r}
+variable_types <- sapply(Class1, class)
+
+num_factors <- sum(variable_types == "factor")
+num_integers <- sum(variable_types == "integer")
+num_numerics <- sum(variable_types == "numeric")
+num_characters <- sum(variable_types == "character")
+
+table(sapply(Class1, class)) 
+
+```
+
+
+5. a. Using code, check the bday and bmonth variables for any unusual or missing values. If you find any, b. describe what you will do with the unusual values in a comment before or immediately following the code that does it, and c. after you have cleaned up any unusual values, find the median bday and month. \*Note: please make sure that your bday and month variables are numeric before doing statistics 
+```{r}
+# a. look at values for bday and bmonth
+Class1$bday
+Class1$bmonth
+
+# b. recode  bday with non numeric values
+
+# bday recoding method 1
+class(Class1$bday) # check that it is coded as character class
+Class1$bday<-ifelse(Class1$bday == "May 21-report 21", "21", Class1$bday)
+Class1$bday<-ifelse(Class1$bday == "March 31st", "31", Class1$bday)
+Class1$bday # check values 
+
+# convert to numeric for statistics
+Class1$bday<-as.numeric(Class1$bday)
+table(Class1$bday, useNA = "always") # check values 
+
+# bmonth recoding
+class(Class1$bmonth)
+
+Class1$bmonth[Class1$bmonth=="May 21-report 5"]<-"5"
+Class1$bmonth[Class1$bmonth=="February"]<-"2"
+Class1$bmonth[Class1$bmonth=="September"]<-"9"
+Class1$bmonth[Class1$bmonth=="July"]<-"7"
+Class1$bmonth[Class1$bmonth=="March"]<-"3"
+Class1$bmonth # check values 
+
+# convert to numeric for statistics
+Class1$bmonth<-as.numeric(Class1$bmonth)
+Class1$bmonth # check values 
+
+# c. calculate medians for bday and bmonth 
+median(Class1$bday, na.rm=TRUE) # 14 (biased because of 0, which is not a value) How could we better design a survey to ensure this doesn't happen?
+median(Class1$bmonth, na.rm=TRUE) # 7
+
+```
+
+6. a. Create a new variable called bseason that gives the season according to Northern Meteorological season in which respondents were born (winter = 12/1 to 2/29, spring = 3/1 to 5/31, summer = 6/1 to 8/31, fall = 9/1 to 11/30). b. Using the table function, print a table of Seasons in the columns and bmonths in the rows that allows you to check that the coding is correct c. Sum the columns using the addmargins function to answer the question of how many classmates were born in each season? Include your answer in the code. 
+```{r}
+# using dplyr
+Class1 <- Class1 %>%
+  mutate(bseason=case_when(bmonth %in% c(12,1,2) ~"Winter",
+                           bmonth %in% c(3,4,5) ~"Spring",
+                           bmonth %in% c(6,7,8) ~"Summer",
+                           bmonth %in% c(9,10,11) ~"Fall"))
+table(Class1$bmonth, Class1$bseason) # check variable
+
+Class1$bseason_f<-factor(Class1$bseason, levels=c("Winter", "Spring", "Summer", "Fall"))
+
+
+# b. 
+table(Class1$bmonth, Class1$bseason)
+table(Class1$bmonth, Class1$bseason_f)
+
+# c.
+tab<-addmargins(table(Class1$bmonth, Class1$bseason, useNA = "always"), 1)
+tab
+tab<-addmargins(table(Class1$bmonth, Class1$bseason_f, useNA = "always"), 1)
+tab
+
+# Births by season: Fall = 4 Winter = 9 Spring = 8 Summer = 8
+```
+
+7. Pick your favorite variable or variables to analyze, come up with a question you want to answer with that variable or variables, generate the code, and provide an answer to your question. Describe what you did using comments (i.e. #’s).
+```{r}
+# Plot the distribution of favorite seasons by country
+ggplot(Class1, aes(x = country, fill = fav_season)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Favorite Season Distribution by Country",
+       x = "Country",
+       y = "Count",
+       fill = "Favorite Season") +
+  theme_minimal()
+```
+```{r}
+# Calculate the count of each favorite season
+season_counts <- table(Class1$fav_season)
+
+# Convert counts to a percentage
+season_percentages <- prop.table(season_counts) * 100
+
+# Convert to a data frame for easy viewing
+season_percentages_df <- as.data.frame(season_percentages)
+names(season_percentages_df) <- c("Favorite_Season", "Percentage")
+
+# View the percentages
+print(season_percentages_df)
+
+```
+
+Is there a relationship between the country a person lives in and their favorite season?
+
+```
+
