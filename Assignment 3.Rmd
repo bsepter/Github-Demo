@@ -29,10 +29,10 @@ library(gmodels)
 
 ```{r}  
 # Loading data 
-read.csv("C:/Users/benny/OneDrive/Documents/GitDemo/HW3/Class 1 Survey Fall 2024_di.csv")
+read.csv("C:/Users/benny/OneDrive/Documents/ADA/GitDemo/HW3/Class 1 Survey Fall 2024_di.csv")
 
 #name data to Class1
-Class1 <- read.csv("C:/Users/benny/OneDrive/Documents/GitDemo/HW3/Class 1 Survey Fall 2024_di.csv")
+Class1 <- read.csv("C:/Users/benny/OneDrive/Documents/ADA/GitDemo/HW3/Class 1 Survey Fall 2024_di.csv")
 ```
 
 Determine: a. the number of observations (i.e. the number of people who filled out the survey) and b. the number of variables in the dataframe.
