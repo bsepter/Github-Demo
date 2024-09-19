@@ -1,0 +1,9 @@
+---
+title: "Untitled"
+author: "Septer"
+date: "2024-09-05"
+output: html_document
+---
+
+#Readme
+Benny Septer
