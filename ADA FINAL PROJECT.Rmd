@@ -1,0 +1,407 @@
+---
+title: "ADA PROJECT"
+author: "Septer"
+date: "2024-11-24"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r}
+pacman::p_load(gridExtra, knitr, kableExtra, mosaic, xtable, pscl, multcomp, pander, MASS, tidyverse, lmtest, readr, sandwich, broom)
+```
+
+```{r}
+# introduce the data
+Thai <- read.csv("THA2021.csv")
+```
+
+```{r}
+#Listing available Variables
+colnames(Thai)
+```
+## Data Management
+```{r}
+#Select required variables
+library(dplyr)
+
+Thai_R12 <- Thai[, c("q1", "q2", "q22", "q24", "q27", "q28", "q34", "q40", "q49", "q54", "q56", "q70")]
+
+#edit variable names
+Thai_R <- Thai_R12 %>%
+  rename(Age = q1, Gender = q2, Loneliness = q22, Suicide = q24, Number_of_friends = q27, Smoking = q28, Alcohol = q34,  Drug_use = q40, Physical_Act =q49, School_Environ = q54, Parental_support = q56, Bullying = q70)
+
+#remove missing Data
+Thai_R_Final <- Thai_R %>%
+  mutate(across(c(Age, Gender, Loneliness, Suicide, Number_of_friends, Smoking, Alcohol, Drug_use, Physical_Act, School_Environ, Parental_support, Bullying), 
+                ~ na_if(as.character(.), "Missing"))) %>%
+ filter(complete.cases(Age, Gender, Loneliness, Suicide, Number_of_friends, Smoking, Alcohol, Drug_use, Physical_Act, School_Environ, Parental_support, Bullying)) -> Thai_R_Final
+```
+```{r}
+colnames(Thai_R_Final)
+```
+
+##rename data codes back to original code names
+```{r}
+
+ # Set factor levels for Age
+
+Thai_R_Final <- Thai_R_Final %>%
+  mutate(
+    Age = as.numeric(as.character(Age)),  # Convert Age to numeric
+    Age = factor(case_when(
+      Age <= 3 ~ "Under_13",
+      Age >= 4 & Age <= 5 ~ "14_15",
+      Age >= 6 & Age <= 7 ~ "16_17",
+      Age >= 8 ~ "Over_18"
+    ), levels = c("Under_13", "14_15", "16_17", "Over_18")),
+
+    # Set factor levels for Gender
+     Gender = factor(case_when(
+      Gender == 1 ~ "Male",
+      Gender == 2 ~ "Female"
+    ), levels = c("Female", "Male")),  
+   
+    # Set factor levels for loneliness
+    Loneliness = factor(case_when(
+      Loneliness == 1 ~ "Never",
+      Loneliness == 2 ~ "Rarely",
+      Loneliness == 3 ~ "Sometimes",
+      Loneliness == 4 ~ "Mosttimes",
+      Loneliness == 5 ~ "Always"
+    ), levels = c("Never", "Rarely", "Sometimes", "Mosttimes", "Always")),  
+    
+    # Set factor levels for suicide
+     Suicide = factor(case_when(
+      Suicide == 1 ~ "Yes",
+      Suicide == 2 ~ "No"
+    ), levels = c("No", "Yes")),  
+
+    # Set factor levels for number of friends
+    Number_of_friends = factor(case_when(
+      Number_of_friends == 1 ~ "0",
+      Number_of_friends == 2 ~ "1",
+      Number_of_friends == 3 ~ "2",
+      Number_of_friends == 4 ~ ">3"
+    ), levels = c("0", "1", "2", ">3")),  
+    
+     Alcohol = as.numeric(as.character(Alcohol)),
+     Alcohol = factor(case_when(
+      Alcohol == 1 ~ "No",
+      Alcohol >= 2  ~ "Yes",
+    ), levels = c("No", "Yes")),
+
+    # Set factor levels for drug use 
+    Drug_use = factor(case_when(
+      Drug_use == 1 ~ "No",
+      Drug_use >= 2  ~ "Yes",
+    ), levels = c("No", "Yes")),  
+    
+     # Set factor levels for Parental_support
+      Parental_support = factor(case_when(
+      Parental_support == 1 ~ "Never",
+      Parental_support == 2 ~ "Rarely",
+      Parental_support == 3 ~ "Sometimes",
+      Parental_support == 4 ~ "Mosttimes",
+      Parental_support == 5 ~ "Always"
+    ), levels = c("Never", "Rarely", "Sometimes", "Mosttimes", "Always")),
+   
+     # Set factor levels for Bullying
+      Bullying = factor(case_when(
+      Bullying == 1 ~ "Yes",
+      Bullying == 2 ~ "No"
+    ), levels = c("No", "Yes")),  
+  )
+
+```
+
+## Data cleaning Flow Chart
+```{r}
+library(DiagrammeR)
+
+# Create the flowchart
+DiagrammeR::grViz("
+digraph flowchart {
+  graph [layout = dot, rankdir = TB]
+  
+  # Define nodes
+  node [shape = oval, style = filled, fillcolor = lightblue]
+  start [label = 'Introduce Data\\nThai']
+  final [label = 'Final Cleaned Dataset\\nThai_R_Final']
+  
+  node [shape = rectangle, style = filled, fillcolor = lightgoldenrod]
+  read_data [label = 'Initial Data\n132 variables\n5,661 Observations']
+  select_vars [label = 'Select Relevant Variables:\\n8 Variables\n5,661 Observations']
+  rename_vars [label = 'Rename Variables:\\n8 Variables\n5,661 Observations']
+  remove_missing [label = 'Remove Missing Data:\\n8 Variables\n4,547 Observations']
+  
+  # Connect nodes
+  start -> read_data -> select_vars -> rename_vars -> remove_missing -> final
+}
+")
+
+```
+
+## Descriptive Tables
+```{r}
+table1::table1(~ Age + Gender +  Loneliness + Number_of_friends + Alcohol + Drug_use + Parental_support  | Suicide, data = Thai_R_Final)
+```
+# Interpretations
+Age
+The age distribution reveals a higher concentration of participants in the 12_13 and 14_15 age groups, with 28.9% and 38.2% of the total sample, respectively. The 16_17 and Over_18 groups represent a smaller percentage (21.3% and 11.5%, respectively).
+
+Gender
+Females make up a larger proportion of the Yes group (74.3%) compared to males (25.7%). Overall, females represent 57.9% of the total sample. This indicates that females in this dataset may have higher rates of experiencing the outcome compared to males
+
+Loneliness
+The data on loneliness shows that those who answered "Yes" report higher levels of loneliness, particularly in the Mosttimes and Always categories, which account for 29.9% and 17.8%, respectively. In contrast, the No group primarily reports lower levels of loneliness, particularly in the Never and Rarely categories (28.2% and 29.0%, respectively).
+
+Alcohol and Substance use
+The data reveals higher rates of alcohol use, and drug use in the Yes group, with 58.7%, and 89.4% reporting these behaviors, respectively. 
+The No group has lower percentages, with 23.0% 41.8% consuming alcohol, and 92.6% engaging in drug use.
+
+Parental Support
+Parental support follows a similar pattern, with a higher percentage of the Yes group (39.9%) reporting a lack of parental support, while the No group has 25.9% in the "Never" category.
+
+## Visualize distribution  Bar Graphs & Charts
+```{r}
+library(ggplot2)
+library(dplyr)
+## distribution by Age
+# Create a  Age data frame
+data <- data.frame(
+  Category = c("Under_11", "12_13", "14_15", "16_17", "Over_18"),
+  No = c(3, 1072, 1456, 833, 464),
+  Yes = c(1, 244, 282, 135, 57)
+)
+
+# Reshape data for plotting
+data_long <- data %>%
+  gather(key = "Suicide_Ideation", value = "Count", -Category)
+
+# Plot
+ggplot(data_long, aes(x = Category, y = Count, fill = Suicide_Ideation)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Age Distribution by Suicide_Ideation", x = "Age Group", y = "Count") +
+  theme_minimal()
+```
+# Interpretations
+The age distribution reveals a higher concentration of participants in the 12_13 and 14_15 age groups, with 28.9% and 38.2% of the total sample, respectively. The 16_17 and Over_18 groups represent a smaller percentage (21.3% and 11.5%, respectively). The Yes group tends to be slightly younger, with a higher proportion in the 12_13 and 14_15 categories
+
+
+```{r}
+## Distribution by Gender
+
+# Create the data for gender and 'Yes' outcome (from your table example)
+gender_data <- data.frame(
+  Gender = c("Female", "Male"),
+  Yes = c(534, 185),
+  Total = c(2634, 1913)
+)
+
+# Calculate the percentage of "Yes" for each gender
+gender_data$Percentage <- gender_data$Yes / gender_data$Total * 100
+
+# Plot the pie chart
+ggplot(gender_data, aes(x = "", y = Percentage, fill = Gender)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  geom_text(aes(label = paste0(round(Percentage, 1), "%")), position = position_stack(vjust = 0.5)) +
+  labs(title = "Gender Distribution for 'Yes' Outcome") +
+  theme_void() +
+  scale_fill_manual(values = c("maroon", "darkgreen"))
+
+
+```
+#Interepretations
+Females make up a larger proportion of the Yes group (74.3%) compared to males (25.7%). Overall, females represent 57.9% of the total sample. This indicates that females in this dataset may have higher rates of experiencing the outcome compared to males, suggesting a gender-based difference in mental health or behavior outcomes.
+```{r}
+# Loneliness data example
+loneliness_data <- data.frame(
+  Loneliness = c("Never", "Rarely", "Sometimes", "Mosttimes", "Always"),
+  No = c(1080, 1112, 1160, 319, 157),
+  Yes = c(66, 98, 212, 215, 128)
+)
+
+# Reshape data for plotting
+loneliness_data_long <- loneliness_data %>%
+  gather(key = "Outcome", value = "Count", -Loneliness)
+# Set the factor levels for the Loneliness variable in the desired order
+loneliness_data_long$Loneliness <- factor(loneliness_data_long$Loneliness, 
+                                          levels = c("Never", "Rarely", "Sometimes", "Mosttimes", "Always"))
+
+# Plot
+ggplot(loneliness_data_long, aes(x = Loneliness, y = Count, fill = Outcome)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Loneliness Distribution by Outcome", x = "Loneliness Level", y = "Count") +
+  theme_minimal()
+
+```
+
+```{r}
+# Reshape data for plotting, focusing on the 'Yes' outcome
+loneliness_data_long <- loneliness_data %>%
+  gather(key = "Outcome", value = "Count", -Loneliness) %>%
+  filter(Outcome == "Yes")  # Filter to include only 'Yes' outcome
+
+# Set the factor levels for the Loneliness variable in the desired order
+loneliness_data_long$Loneliness <- factor(loneliness_data_long$Loneliness, 
+                                          levels = c("Never", "Rarely", "Sometimes", "Mosttimes", "Always"))
+
+
+# Plot_2
+ggplot(loneliness_data_long, aes(x = Loneliness, y = Count, fill = Outcome)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Loneliness Distribution with 'Yes' Outcome", x = "Loneliness Level", y = "Count") +
+  theme_minimal()
+
+
+
+```
+#interpretations
+The data on loneliness shows that those who answered "Yes" report higher levels of loneliness, particularly in the Mosttimes and Always categories, which account for 29.9% and 17.8%, respectively. In contrast, the No group primarily reports lower levels of loneliness, particularly in the Never and Rarely categories (28.2% and 29.0%, respectively).
+
+
+##Model 1 Total Effect
+```{r}
+# Recode 'Yes' and 'No' to 1 and 0
+Thai_R_Final $suicide <- ifelse(Thai_R_Final$Suicide == "Yes", 1, 0)
+
+
+#Perform a general linear model 
+model_1 <- glm (Suicide ~ Loneliness + Age + Gender + Number_of_friends +  Parental_support, 
+             family = binomial(link = "logit"), data = Thai_R_Final)
+
+summary(model_1)
+```
+
+```{r}
+
+#confidence intervals
+broom::tidy(model_1, exponentiate = TRUE, conf.int = TRUE)
+
+ #Tidy the model and round specific columns to 2 decimal places
+broom::tidy(model_1, exponentiate = TRUE, conf.int = TRUE) %>%
+  mutate(
+    estimate = round(estimate, 2),
+    std.error = round(std.error, 2),
+    statistic = round(statistic, 2),
+    conf.low = round(conf.low, 2),
+    conf.high = round(conf.high, 2)
+  )
+```
+##Model 2 Direct effect
+```{r}
+# Recode 'Yes' and 'No' to 1 and 0
+Thai_R_Final $suicide <- ifelse(Thai_R_Final$Suicide == "Yes", 1, 0)
+
+
+#Perform a general linear model 
+model_2 <- glm (Suicide ~ Loneliness + Age + Gender + Number_of_friends +  Parental_support + Alcohol + Drug_use, 
+             family = binomial(link = "logit"), data = Thai_R_Final)
+
+summary(model_2)
+```
+```{r}
+broom::tidy(model_2, exponentiate = TRUE, conf.int = TRUE)
+
+ #Tidy the model and round specific columns to 2 decimal places
+broom::tidy(model_2, exponentiate = TRUE, conf.int = TRUE) %>%
+  mutate(
+    estimate = round(estimate, 2),
+    std.error = round(std.error, 2),
+    statistic = round(statistic, 2),
+    conf.low = round(conf.low, 2),
+    conf.high = round(conf.high, 2)
+  )
+```
+
+
+
+# Model Visualization
+
+```{r}
+# Load required library
+library(forestplot)
+
+# Create a data frame for the input data
+data <- data.frame(
+  term = c("(Intercept)", "LonelinessRarely", "LonelinessSometimes", 
+           "LonelinessMosttimes", "LonelinessAlways", "Age14_15", 
+           "Age16_17", "AgeOver_18", "GenderMale", 
+           "Number_of_friends1", "Number_of_friends2", "Number_of_friends>3",
+           "Parental_supportRarely", "Parental_supportSometimes", 
+           "Parental_supportMosttimes", "Parental_supportAlways"),
+  estimate = c(0.17, 1.41, 2.66, 9.52, 10.67, 0.78, 0.68, 0.55, 0.46, 
+               1.21, 1.02, 0.87, 0.81, 0.63, 0.45, 0.49),
+  lower = c(0.11, 1.01, 2.00, 7.02, 7.53, 0.63, 0.53, 0.39, 0.38, 
+            0.79, 0.67, 0.62, 0.63, 0.50, 0.32, 0.35),
+  upper = c(0.26, 1.96, 3.59, 13.05, 15.23, 0.95, 0.88, 0.76, 0.56, 
+            1.85, 1.55, 1.22, 1.03, 0.79, 0.61, 0.66)
+)
+
+# Prepare the labels
+table_data <- cbind(data$term)
+
+# Create the forest plot
+forestplot(
+  labeltext = table_data,
+  mean = data$estimate,
+  lower = data$lower,
+  upper = data$upper,
+  zero = 1,  # Add a vertical reference line at 1
+  xlab = "Log Odds",
+  lineheight = unit(1.5, "lines"),  # Line height for spacing
+  title = "Model Forest Plot",
+  col = fpColors(box = "royalblue", line = "darkblue", summary = "royalblue")
+)
+
+```
+
+
+#Interpretations
+Loneliness:
+There is a clear positive association in the impact of loneliness on the outcome of interest, with higher levels of reported loneliness associated with higher OR of the outcome. 
+Those who report feeling lonely "Rarely" have 1.41 times (95% CI: 1.01–1.96), “Sometimes” have 2.66 times (CI: 2.00–3.59), “Most times” have 9.52 times (CI: 7.02–13.05), and “Always have” 10.67 times (CI: 7.02–13.05) times the odds of having the outcome compared to those who never feel lonely. 
+All the levels were significant with P<0.05 for the 4 tests.
+
+
+Age 14–15 (OR = 0.78, 95% CI: 0.63–0.95, p = 0.016): Adolescents aged 14–15 have a 22% lower likelihood of suicidal ideation compared to the reference group. This result is significant.
+
+Age 16–17 (OR = 0.68, 95% CI: 0.53–0.88, p = 0.003): Older adolescents (16–17) show a 32% reduced likelihood of suicidal ideation compared to the reference group. The protective effect strengthens as age increases.
+
+Age Over 18 (OR = 0.55, 95% CI: 0.39–0.76, p < 0.001): Young adults over 18 years old have a 45% reduced likelihood of suicidal ideation. 
+This suggests that older individuals may develop coping mechanisms or have fewer stressors associated with suicidal thoughts.
+
+Gender
+Male (OR = 0.46, 95% CI: 0.38–0.56, p < 0.001): Males are 54% less likely to report suicidal ideation compared to females. This aligns with evidence that females often report higher rates of suicidal ideation despite males being more likely to die by suicide.
+
+Number of Friends:
+1 Friend (OR = 1.21, 95% CI: 0.79–1.85, p = 0.378): Having one friend is associated with a non-significant 21% increase in the odds of suicidal ideation compared to the reference group (e.g., no friends).
+
+2 Friends (OR = 1.02, 95% CI: 0.67–1.55, p = 0.932): Having two friends has no significant association with suicidal ideation.
+
+More than 3 Friends (OR = 0.87, 95% CI: 0.62–1.22, p = 0.399): Having more than three friends slightly reduces the likelihood of suicidal ideation, but this result is not statistically significant
+
+Parental support
+Rarely Supported (OR = 0.81, 95% CI: 0.63–1.03, p = 0.081): Rare parental support shows a non-significant trend towards reduced suicidal ideation.
+
+Sometimes Supported (OR = 0.63, 95% CI: 0.50–0.79, p < 0.001): Occasional parental support reduces the likelihood of suicidal ideation by 37%, showing a significant protective effect.
+
+Mostly Supported (OR = 0.45, 95% CI: 0.32–0.61, p < 0.001): Those with frequent parental support have a 55% reduced risk of suicidal ideation, indicating a strong protective factor.
+
+Always Supported (OR = 0.49, 95% CI: 0.35–0.66, p < 0.001): Consistent parental support halves the likelihood of suicidal ideation, further highlighting the importance of a supportive environment.
+
+#3Check for Multicolinearity
+```{r}
+car::vif(model_1)
+```
+# interpretation
+In summary, based on the GVIF results for loneliness, number of friends, and drug use in my model, I can conclude that collinearity does not pose a significant issue. The variance in my coefficients does not appear to be substantially inflated due to the correlations among these predictors.
+
+
